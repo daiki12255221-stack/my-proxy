@@ -29,7 +29,9 @@ app.get('/api/proxy', async (req, res) => {
     }
 
     const htmlData = await response.text();
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    
+    // HTMLとしてブラウザに認識させる設定に変更
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(htmlData);
   } catch (err) {
     return res.status(500).json({
