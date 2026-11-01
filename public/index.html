@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JS + HTML 簡易プロキシ</title>
+  <style>
+    body {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+      font-family: sans-serif;
+    }
+    .form-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input[type="url"] {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #0070f3;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    .error {
+      color: red;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      max-height: 500px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>JS + HTML 簡易 Web プロキシ</h1>
+
+  <form id="proxy-form" class="form-container">
+    <input type="url" id="url-input" placeholder="https://example.com" required />
+    <button type="submit" id="submit-btn">コードを取得</button>
+  </form>
+
+  <div id="error-box" class="error"></div>
+
+  <div id="result-container" style="display: none;">
+    <h2>取得結果 (ソースコード)</h2>
+    <pre><code id="code-output"></code></pre>
+  </div>
+
+  <script>
+    const form = document.getElementById('proxy-form');
+    const urlInput = document.getElementById('url-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorBox = document.getElementById('error-box');
+    const resultContainer = document.getElementById('result-container');
+    const codeOutput = document.getElementById('code-output');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const targetUrl = urlInput.value.trim();
+
+      if (!targetUrl) return;
+
+      // 状態リセット
+      submitBtn.disabled = true;
+      submitBtn.textContent = '取得中...';
+      errorBox.style.display = 'none';
+      resultContainer.style.display = 'none';
+      codeOutput.textContent = '';
+
+      try {
+        const response = await fetch(`/api/proxy?url=${encodeURIComponent(targetUrl)}`);
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'エラーが発生しました。');
+        }
+
+        const text = await response.text();
+        codeOutput.textContent = text;
+        resultContainer.style.display = 'block';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'コードを取得';
+      }
+    });
+  </script>
+</body>
+</html>
