@@ -1,0 +1,11 @@
+{
+  "name": "express-vercel-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
