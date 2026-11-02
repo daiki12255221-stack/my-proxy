@@ -79,13 +79,11 @@
     const errorBox = document.getElementById('error-box');
     const previewFrame = document.getElementById('preview-frame');
 
-    // URLのクエリパラメータ (?url=...) をチェックする関数
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
     }
 
-    // ページ読み込み時に ?url= があれば自動で読み込む
     window.addEventListener('DOMContentLoaded', () => {
       const targetUrl = getQueryParam('url');
       if (targetUrl) {
@@ -99,7 +97,6 @@
       const targetUrl = urlInput.value.trim();
       if (!targetUrl) return;
 
-      // ブラウザのURLを `?url=...` の形に書き換える（ページリロードなし）
       const newRelativePathQuery = window.location.pathname + '?url=' + encodeURIComponent(targetUrl);
       window.history.pushState(null, '', newRelativePathQuery);
 
