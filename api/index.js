@@ -32,12 +32,35 @@ app.get('/api/proxy', async (req, res) => {
     let htmlData = await response.text();
     const baseUrl = `${parsedTargetUrl.protocol}//${parsedTargetUrl.host}`;
 
-    // 簡易的な相対パスの絶対パス化（srcやhrefが / から始まる場合にベースURLを補う）
-    // ※ 完璧ではありませんが、多くの静的アセットの読み込みを救済します
-    htmlData = htmlData.replace(
-      /(src|href)=["'](\/[^"']*)["']/g,
-      `$1="${baseUrl}$2"`
-    );
+    // 1. 画像やCSSなどのリソース (src) を絶対パスに変換
+    htmlData = htmlData.replace(/src=["']([^"']+)["']/g, (match, src) => {
+      if (src.startsWith('data:') || src.startsWith('blob:')) return match;
+      try {
+        const absoluteUrl = new URL(src, targetUrl).toString();
+        return `src="${absoluteUrl}"`;
+      } catch (e) {
+        return match;
+      }
+    });
+
+    // 2. ページ内のリンク (href) をすべてプロキシ経由のURLに書き換える
+    htmlData = htmlData.replace(/href=["']([^"']+)["']/g, (match, href) => {
+      if (
+        href.startsWith('#') ||
+        href.startsWith('javascript:') ||
+        href.startsWith('mailto:') ||
+        href.startsWith('tel:')
+      ) {
+        return match;
+      }
+      try {
+        const absoluteUrl = new URL(href, targetUrl).toString();
+        // クリックしたときに再度このプロキシを通るようにする
+        return `href="/?url=${encodeURIComponent(absoluteUrl)}"`;
+      } catch (e) {
+        return match;
+      }
+    });
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(htmlData);
