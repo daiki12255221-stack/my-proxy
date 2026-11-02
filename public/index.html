@@ -25,7 +25,8 @@
       flex: 1;
       gap: 10px;
     }
-    input[type="url"] {
+    /* type="text" に変更して https:// なしの入力も許可 */
+    input[type="text"] {
       flex: 1;
       padding: 8px 12px;
       font-size: 15px;
@@ -63,7 +64,7 @@
 
   <header>
     <form id="proxy-form">
-      <input type="url" id="url-input" placeholder="https://example.com" required />
+      <input type="text" id="url-input" placeholder="example.com または https://example.com" required />
       <button type="submit" id="submit-btn">表示する</button>
     </form>
   </header>
@@ -78,6 +79,14 @@
     const submitBtn = document.getElementById('submit-btn');
     const errorBox = document.getElementById('error-box');
     const previewFrame = document.getElementById('preview-frame');
+
+    function normalizeUrl(url) {
+      url = url.trim();
+      if (!/^https?:\/\//i.test(url)) {
+        return 'https://' + url;
+      }
+      return url;
+    }
 
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -94,8 +103,11 @@
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const targetUrl = urlInput.value.trim();
+      let targetUrl = urlInput.value;
       if (!targetUrl) return;
+
+      targetUrl = normalizeUrl(targetUrl);
+      urlInput.value = targetUrl;
 
       const newRelativePathQuery = window.location.pathname + '?url=' + encodeURIComponent(targetUrl);
       window.history.pushState(null, '', newRelativePathQuery);
