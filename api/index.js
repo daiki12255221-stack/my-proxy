@@ -2,10 +2,15 @@ const express = require('express');
 const app = express();
 
 app.get('/api/proxy', async (req, res) => {
-  const targetUrl = req.query.url;
+  let targetUrl = req.query.url;
 
   if (!targetUrl) {
     return res.status(400).json({ error: 'URLパラメーターが必要です。' });
+  }
+
+  // http:// または https:// がついていなければ自動補完
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = 'https://' + targetUrl;
   }
 
   let parsedTargetUrl;
@@ -30,18 +35,14 @@ app.get('/api/proxy', async (req, res) => {
     }
 
     let htmlData = await response.text();
-    const baseUrl = `${parsedTargetUrl.protocol}//${parsedTargetUrl.host}`;
 
-    // 1. 画像やCSSなどのリソース (src) を絶対パスに変換
-    htmlData = htmlData.replace(/src=["']([^"']+)["']/g, (match, src) => {
-      if (src.startsWith('data:') || src.startsWith('blob:')) return match;
-      try {
-        const absoluteUrl = new URL(src, targetUrl).toString();
-        return `src="${absoluteUrl}"`;
-      } catch (e) {
-        return match;
-      }
-    });
+    // 1. <head> の先頭に <base> タグを注入（CSSや画像の相対パス崩れを完全に防ぐ）
+    const baseTag = `<base href="${targetUrl}">`;
+    if (/<head[^>]*>/i.test(htmlData)) {
+      htmlData = htmlData.replace(/<head[^>]*>/i, `$&${baseTag}`);
+    } else {
+      htmlData = `${baseTag}${htmlData}`;
+    }
 
     // 2. ページ内のリンク (href) をすべてプロキシ経由のURLに書き換える
     htmlData = htmlData.replace(/href=["']([^"']+)["']/g, (match, href) => {
@@ -55,7 +56,6 @@ app.get('/api/proxy', async (req, res) => {
       }
       try {
         const absoluteUrl = new URL(href, targetUrl).toString();
-        // クリックしたときに再度このプロキシを通るようにする
         return `href="/?url=${encodeURIComponent(absoluteUrl)}"`;
       } catch (e) {
         return match;
