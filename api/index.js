@@ -8,8 +8,9 @@ app.get('/api/proxy', async (req, res) => {
     return res.status(400).json({ error: 'URLパラメーターが必要です。' });
   }
 
+  let parsedTargetUrl;
   try {
-    new URL(targetUrl);
+    parsedTargetUrl = new URL(targetUrl);
   } catch (err) {
     return res.status(400).json({ error: '無効なURL形式です。' });
   }
@@ -28,9 +29,16 @@ app.get('/api/proxy', async (req, res) => {
       });
     }
 
-    const htmlData = await response.text();
-    
-    // HTMLとしてブラウザに認識させる設定に変更
+    let htmlData = await response.text();
+    const baseUrl = `${parsedTargetUrl.protocol}//${parsedTargetUrl.host}`;
+
+    // 簡易的な相対パスの絶対パス化（srcやhrefが / から始まる場合にベースURLを補う）
+    // ※ 完璧ではありませんが、多くの静的アセットの読み込みを救済します
+    htmlData = htmlData.replace(
+      /(src|href)=["'](\/[^"']*)["']/g,
+      `$1="${baseUrl}$2"`
+    );
+
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(htmlData);
   } catch (err) {
