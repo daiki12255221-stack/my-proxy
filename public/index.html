@@ -3,29 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JS + HTML 簡易プロキシ (ブラウザ表示版)</title>
+  <title>Web Proxy Viewer</title>
   <style>
     body {
-      max-width: 1000px;
-      margin: 20px auto;
-      padding: 0 20px;
+      margin: 0;
+      padding: 0;
       font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
-    .form-container {
+    header {
+      background: #f4f4f4;
+      padding: 10px 20px;
+      border-bottom: 1px solid #ddd;
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex: 1;
+      gap: 10px;
     }
     input[type="url"] {
       flex: 1;
-      padding: 10px 14px;
-      font-size: 16px;
+      padding: 8px 12px;
+      font-size: 15px;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
     button {
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 8px 16px;
+      font-size: 15px;
       background-color: #0070f3;
       color: #fff;
       border: none;
@@ -36,61 +45,72 @@
       background-color: #999;
       cursor: not-allowed;
     }
-    .error {
-      color: red;
-      padding: 10px;
-      border: 1px solid red;
-      border-radius: 4px;
-      margin-bottom: 20px;
+    .error-banner {
+      background: #ffe6e6;
+      color: #c00;
+      padding: 10px 20px;
       display: none;
     }
-    /* iframeの表示領域スタイル */
     #preview-frame {
+      flex: 1;
       width: 100%;
-      height: 700px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background-color: #fff;
+      border: none;
+      background: #fff;
     }
   </style>
 </head>
 <body>
 
-  <h1>Web プロキシ (Webページ表示)</h1>
+  <header>
+    <form id="proxy-form">
+      <input type="url" id="url-input" placeholder="https://example.com" required />
+      <button type="submit" id="submit-btn">表示する</button>
+    </form>
+  </header>
 
-  <form id="proxy-form" class="form-container">
-    <input type="url" id="url-input" placeholder="https://example.com" required />
-    <button type="submit" id="submit-btn">ページを表示</button>
-  </form>
+  <div id="error-box" class="error-banner"></div>
 
-  <div id="error-box" class="error"></div>
-
-  <div id="result-container" style="display: none;">
-    <h2>プレビュー結果</h2>
-    <!-- レンダリング用の iframe -->
-    <iframe id="preview-frame"></iframe>
-  </div>
+  <iframe id="preview-frame"></iframe>
 
   <script>
     const form = document.getElementById('proxy-form');
     const urlInput = document.getElementById('url-input');
     const submitBtn = document.getElementById('submit-btn');
     const errorBox = document.getElementById('error-box');
-    const resultContainer = document.getElementById('result-container');
     const previewFrame = document.getElementById('preview-frame');
 
-    form.addEventListener('submit', async (e) => {
+    // URLのクエリパラメータ (?url=...) をチェックする関数
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // ページ読み込み時に ?url= があれば自動で読み込む
+    window.addEventListener('DOMContentLoaded', () => {
+      const targetUrl = getQueryParam('url');
+      if (targetUrl) {
+        urlInput.value = targetUrl;
+        loadProxyPage(targetUrl);
+      }
+    });
+
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
       const targetUrl = urlInput.value.trim();
-
       if (!targetUrl) return;
 
-      // 状態リセット
+      // ブラウザのURLを `?url=...` の形に書き換える（ページリロードなし）
+      const newRelativePathQuery = window.location.pathname + '?url=' + encodeURIComponent(targetUrl);
+      window.history.pushState(null, '', newRelativePathQuery);
+
+      loadProxyPage(targetUrl);
+    });
+
+    async function loadProxyPage(targetUrl) {
       submitBtn.disabled = true;
       submitBtn.textContent = '読み込み中...';
       errorBox.style.display = 'none';
-      resultContainer.style.display = 'none';
-      previewFrame.srcdoc = '';
+      previewFrame.srcdoc = '<p style="padding: 20px; font-family: sans-serif;">読み込み中...</p>';
 
       try {
         const response = await fetch(`/api/proxy?url=${encodeURIComponent(targetUrl)}`);
@@ -101,18 +121,16 @@
         }
 
         const htmlText = await response.text();
-        
-        // iframeに取得したHTMLをセットしてレンダリング
         previewFrame.srcdoc = htmlText;
-        resultContainer.style.display = 'block';
       } catch (err) {
         errorBox.textContent = err.message;
         errorBox.style.display = 'block';
+        previewFrame.srcdoc = '';
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'ページを表示';
+        submitBtn.textContent = '表示する';
       }
-    });
+    }
   </script>
 </body>
 </html>
