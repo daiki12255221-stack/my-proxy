@@ -1,4 +1,4 @@
-import { settings, allowedMethods } from "../../config/settings.js";
+import { allowedMethods } from "../../config/settings.js";
 import { fetchTarget } from "./fetch.js";
 import { rewriteHtml } from "./rewrite.js";
 import { rewriteCss } from "./css.js";
@@ -39,6 +39,18 @@ export default async function handler(req, res) {
     res.setHeader("referrer-policy", "no-referrer");
     res.end(body);
   } catch (error) {
+    // Runtime Logs に通信失敗の本当の原因を残す（URLのクエリや個人情報は記録しない）。
+    const cause = error?.cause;
+    console.error("[proxy] request failed", {
+      name: error?.name,
+      message: error?.message,
+      causeName: cause?.name,
+      causeMessage: cause?.message,
+      causeCode: cause?.code,
+      causeErrno: cause?.errno,
+      stack: error?.stack
+    });
+
     const message = error?.message || "ページを取得できませんでした。";
     const status = /URL|接続先|ホスト名|HTTPまたはHTTPS|ユーザー名/.test(message) ? 400 : 502;
     return send(res, status, message);
