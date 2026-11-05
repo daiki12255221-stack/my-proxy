@@ -23,31 +23,31 @@ export default async function handler(req, res) {
     const result = await fetchTarget(target, req.method);
     const contentType = result.headers.get("content-type") || "application/octet-stream";
     const mime = contentType.split(";")[0].trim().toLowerCase();
+    const looksLikeCss = /\.css(?:$|[?#])/i.test(result.finalUrl);
 
     let body = result.body;
     if (mime === "text/html" || mime === "application/xhtml+xml") {
       body = Buffer.from(rewriteHtml(body.toString("utf8"), result.finalUrl));
-    } else if (mime === "text/css") {
+    } else if (mime === "text/css" || looksLikeCss) {
       body = Buffer.from(rewriteCss(body.toString("utf8"), result.finalUrl));
     }
 
     res.statusCode = result.status;
-    res.setHeader("content-type", contentType);
+    res.setHeader("content-type", mime === "text/plain" && looksLikeCss
+      ? "text/css; charset=utf-8"
+      : contentType);
     res.setHeader("x-content-type-options", "nosniff");
     res.setHeader("cache-control", "no-store");
     res.setHeader("content-security-policy", "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors *");
     res.setHeader("referrer-policy", "no-referrer");
     res.end(body);
   } catch (error) {
-    // Runtime Logs に通信失敗の本当の原因を残す（URLのクエリや個人情報は記録しない）。
-    const cause = error?.cause;
     console.error("[proxy] request failed", {
       name: error?.name,
       message: error?.message,
-      causeName: cause?.name,
-      causeMessage: cause?.message,
-      causeCode: cause?.code,
-      causeErrno: cause?.errno,
+      causeName: error?.cause?.name,
+      causeMessage: error?.cause?.message,
+      causeCode: error?.cause?.code,
       stack: error?.stack
     });
 
