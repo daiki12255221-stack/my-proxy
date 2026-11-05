@@ -14,9 +14,9 @@ function isStylesheetResponse(mime, finalUrl) {
   if (mime === "text/css") return true;
   try {
     const url = new URL(finalUrl);
-    if (/\\.css$/i.test(url.pathname)) return true;
+    if (/\.css$/i.test(url.pathname)) return true;
     const only = url.searchParams.get("only") || "";
-    return /(?:^|,)\\s*styles\\s*(?:,|$)/i.test(only);
+    return /(?:^|,)\s*styles\s*(?:,|$)/i.test(only);
   } catch {
     return false;
   }
