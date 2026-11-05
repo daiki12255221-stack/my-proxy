@@ -19,18 +19,18 @@ function rewriteReference(value, baseUrl) {
 export function rewriteCss(css, baseUrl) {
   if (typeof css !== "string" || !css) return css;
 
-  // Handle quoted @import paths first; url(...) imports are handled only below.
+  // Rewrite quoted @import paths that do not use url(...).
   let output = css.replace(
-    /(@import\\s+)(["'])([^"'\\\\]*(?:\\\\.[^"'\\\\]*)*)\\2/gi,
+    /(@import\s+)(["'])([^"'\\]*(?:\\.[^"'\\]*)*)\2/gi,
     (whole, prefix, quote, value) => {
       if (shouldSkip(value)) return whole;
       return `${prefix}${quote}${rewriteReference(value, baseUrl)}${quote}`;
     }
   );
 
-  // One pass for every url(...), including @import url(...), avoids double rewriting.
+  // Rewrite url(...) once, including @import url(...).
   output = output.replace(
-    /url\\(\\s*(?:(["'])(.*?)\\1|([^)]*?))\\s*\\)/gi,
+    /url\(\s*(?:(["'])(.*?)\1|([^)]*?))\s*\)/gi,
     (whole, quote, quotedValue, unquotedValue) => {
       const value = (quotedValue ?? unquotedValue ?? "").trim();
       if (shouldSkip(value)) return whole;
@@ -38,5 +38,6 @@ export function rewriteCss(css, baseUrl) {
       return `url("${rewritten.replace(/"/g, "%22")}")`;
     }
   );
+
   return output;
 }
