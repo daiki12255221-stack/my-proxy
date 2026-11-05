@@ -11,9 +11,11 @@ async function readLimited(response, limit) {
 
   const chunks = [];
   let total = 0;
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
+
     total += value.byteLength;
     if (total > limit) {
       await reader.cancel();
@@ -21,6 +23,7 @@ async function readLimited(response, limit) {
     }
     chunks.push(Buffer.from(value));
   }
+
   return Buffer.concat(chunks, total);
 }
 
@@ -32,18 +35,25 @@ export async function fetchTarget(input, method = "GET") {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), settings.timeoutMs);
 
-    // DNS検証で確認したIPに接続を固定し、DNS再解決によるすり替えを避ける。
+    // undici may request DNS results with { all: true }.
+    // Return the matching Node.js lookup callback shape in both cases.
     const dispatcher = new Agent({
       connect: {
-        lookup(_hostname, _options, callback) {
-          callback(null, resolved.address, resolved.family);
+        lookup(_hostname, options, callback) {
+          if (options?.all) {
+            callback(null, [{
+              address: resolved.address,
+              family: resolved.family
+            }]);
+          } else {
+            callback(null, resolved.address, resolved.family);
+          }
         }
       }
     });
 
-    let response;
     try {
-      response = await undiciFetch(current, {
+      const response = await undiciFetch(current, {
         method,
         redirect: "manual",
         dispatcher,
@@ -57,8 +67,13 @@ export async function fetchTarget(input, method = "GET") {
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         const location = response.headers.get("location");
         await response.body?.cancel();
+
         if (!location) throw new Error("転送先がありません。");
-        if (redirects === settings.maxRedirects) throw new Error("転送回数の上限を超えました。");
+        if (redirects === settings.maxRedirects) {
+          throw new Error("転送回数の上限を超えました。");
+        }
+
+        // Validate every redirect target before the next connection.
         current = validateUrl(new URL(location, current).toString());
         continue;
       }
@@ -74,7 +89,9 @@ export async function fetchTarget(input, method = "GET") {
         finalUrl: current.toString()
       };
     } catch (error) {
-      if (error.name === "AbortError") throw new Error("接続がタイムアウトしました。");
+      if (error?.name === "AbortError") {
+        throw new Error("接続がタイムアウトしました。");
+      }
       throw error;
     } finally {
       clearTimeout(timer);
