@@ -1,0 +1,19 @@
+{
+  "name": "web-proxy-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node --check api/proxy/index.js && node --check api/proxy/fetch.js && node --check api/proxy/rewrite.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "ipaddr.js": "^2.2.0",
+    "undici": "^6.21.0"
+  },
+  "devDependencies": {
+    "vercel": "^39.2.0"
+  }
+}
