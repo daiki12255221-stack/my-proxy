@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Web Proxy</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <p class="eyebrow">SIMPLE WEB PROXY</p>
+      <h1>Web Proxy</h1>
+      <p class="description">アクセスしたいページのURLを入力してください。</p>
+      <form id="proxy-form">
+        <label for="url">URL</label>
+        <div class="input-row">
+          <input id="url" name="url" type="url" placeholder="https://example.com" autocomplete="url" required>
+          <button type="submit">開く</button>
+        </div>
+      </form>
+      <p id="message" class="message" role="status"></p>
+      <p class="notice">このプロキシは試作版です。ログインが必要なページや一部の動画・動的コンテンツには対応していません。</p>
+    </section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
